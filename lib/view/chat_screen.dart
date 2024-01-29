@@ -9,6 +9,12 @@ import 'package:chatgpt/view/components/loading_widget.dart';
 import 'package:chatgpt/view/components/text_input_widget.dart';
 import 'package:chatgpt/view/components/user_question_widget.dart';
 import 'package:flutter/material.dart';
+import 'package:mic_stream/mic_stream.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:permission_handler/permission_handler.dart';
+
+
+
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({Key? key}) : super(key: key);
@@ -21,11 +27,17 @@ class _ChatScreenState extends State<ChatScreen> {
   String? answer;
   final loadingNotifier = ValueNotifier<bool>(false);
   final List<QuestionAnswer> questionAnswers = [];
-
+  bool _hasSpeech = false;
   late ScrollController scrollController;
   late ChatGpt chatGpt;
   late TextEditingController inputQuestionController;
+  bool _isRecording = false;
+  Stream<List<int>>? stream;
   StreamSubscription<CompletionResponse>? streamSubscription;
+  stt.SpeechToText _speechToText = stt.SpeechToText();
+  List<stt.LocaleName> _localeNames = [];
+  String _currentLocaleId = '';
+
 
   @override
   void initState() {
@@ -42,6 +54,55 @@ class _ChatScreenState extends State<ChatScreen> {
     scrollController.dispose();
     streamSubscription?.cancel();
     super.dispose();
+  }
+
+
+  Future<void> initSpeechState() async {
+    print('Initialize initSpeechState');
+    try {
+      var hasSpeech = await _speechToText.initialize(
+        onStatus: (status) => print('SpeechToText status: $status'),
+        onError: (errorNotification) => print('SpeechToText error: $errorNotification'),
+      );
+      if (hasSpeech) {
+        // Get the list of languages installed on the supporting platform so they
+        // can be displayed in the UI for selection by the user.
+        _localeNames = await _speechToText.locales();
+
+        var systemLocale = await _speechToText.systemLocale();
+        _currentLocaleId = systemLocale?.localeId ?? '';
+      }
+      if (!mounted) return;
+
+      setState(() {
+        _hasSpeech = hasSpeech;
+      });
+    } catch (e) {
+      setState(() {
+        _hasSpeech = false;
+      });
+      print(e.toString());
+    }
+  }
+
+  void _toggleStartRecording() async {
+    if (_hasSpeech) {
+      setState(() => _isRecording = true);
+      _speechToText.listen(
+        onResult: (result) {
+          setState(() {
+            inputQuestionController.text = result.recognizedWords;
+            print(inputQuestionController.text);
+          });
+        },
+      );
+    }
+  }
+
+  void _toggleStopRecording() {
+    _speechToText.stop();
+    print("_toggleStopRecording");
+    setState(() => _isRecording = false);
   }
 
   @override
@@ -65,6 +126,9 @@ class _ChatScreenState extends State<ChatScreen> {
             TextInputWidget(
               textController: inputQuestionController,
               onSubmitted: () => _sendMessage(),
+              toggleStartRecording: () => _hasSpeech ? _toggleStartRecording() : initSpeechState() ,
+              toggleStopRecording: () => _toggleStopRecording(),
+              isRecording: _isRecording,
             )
           ],
         ),
@@ -135,7 +199,7 @@ class _ChatScreenState extends State<ChatScreen> {
       stream: true,
       maxTokens: 500,
       temperature: 1,
-      model: ChatGptModel.textDavinci003,
+      model: ChatGptModel.textDavinci003.modelName,
     );
     await _streamResponse(testRequest)
         .whenComplete(() => loadingNotifier.value = true);

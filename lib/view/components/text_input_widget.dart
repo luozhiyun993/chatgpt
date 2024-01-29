@@ -2,13 +2,21 @@ import 'package:chatgpt/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 
+
+
 class TextInputWidget extends StatelessWidget {
   final TextEditingController textController;
   final VoidCallback onSubmitted;
+  final GestureTapCallback toggleStartRecording;
+  final GestureTapCallback toggleStopRecording;
+  final bool isRecording;
 
   const TextInputWidget(
-      {required this.textController, required this.onSubmitted, Key? key})
+      {required this.textController, required this.onSubmitted, Key? key,
+      required this.toggleStartRecording, required this.toggleStopRecording,
+        required this.isRecording,})
       : super(key: key);
+
 
   @override
   Widget build(BuildContext context) {
@@ -43,6 +51,28 @@ class TextInputWidget extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 12),
+        GestureDetector(
+          onTap:() {
+            if (isRecording) {
+              toggleStopRecording();
+            } else {
+              toggleStartRecording();
+            }
+          } ,
+          child: Container(
+            width: 48,
+            height: 48,
+            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.grey,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              isRecording ? Icons.mic : Icons.mic_none,
+              color: Colors.white,
+            ),
+          ),
+        ),
         Container(
           width: 48,
           height: 48,

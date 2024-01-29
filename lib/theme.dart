@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-final kWhiteText = GoogleFonts.nunito(
+// final kWhiteText = GoogleFonts.nunito(
+//   color: kWhiteColor,
+// );
+
+const kWhiteText = TextStyle(
+  fontFamily: 'Nunito',
   color: kWhiteColor,
 );
 
